@@ -4,24 +4,28 @@
   <meta charset="UTF-8">
   <title>Climate Emissions Map Demo</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://unpkg.com/topojson-client@3"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Projected Temperature Change (2100 vs 2015)</h1>
-  <p>
-    Explore global temperature change under different emissions scenarios.<br>
-    Select a scenario to update the visualization below.
-  </p>
-  <label for="scenario">Emissions Scenario:</label>
-  <select id="scenario">
-    <option value="Low Emissions">Low Emissions</option>
-    <option value="Medium Emissions">Medium Emissions</option>
-    <option value="High Emissions">High Emissions</option>
-  </select>
-  
-  <div id="map"></div>
-  
-  <!-- This will link to your D3 code -->
-  <script src="main.js"></script>
+  <div id="container" style="text-align: center; max-width: 1020px; margin: 0 auto;">
+    <h1 style="margin-bottom: 0.5em;">Projected Mean Temperatures by Decade</h1>
+    <p>
+      Explore global temperature projections under different emissions scenarios.<br>
+      Select a scenario and decade below.
+    </p>
+    <div style="margin-bottom: 1em;">
+      <label for="scenario">Emissions Scenario:</label>
+      <select id="scenario">
+        <option value="Low Emissions">Low Emissions</option>
+        <option value="Medium Emissions">Medium Emissions</option>
+        <option value="High Emissions">High Emissions</option>
+      </select>
+      <label for="yearSelect">Year:</label>
+      <select id="yearSelect"></select>
+    </div>
+    <div id="map" style="display: inline-block; position: relative;"></div>
+    <script src="main.js"></script>
+  </div>
 </body>
 </html>
