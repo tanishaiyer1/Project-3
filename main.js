@@ -94,11 +94,12 @@ Promise.all([
     .attr("x1", "0%").attr("x2", "100%")
     .attr("y1", "0%").attr("y2", "0%");
   Array.from({ length: 12 }, (_, i) => i / 11).forEach(t => {
-    const temp = colorMax - t * (colorMax - colorMin);
+    const temp = colorMin + t * (colorMax - colorMin);
     gradient.append("stop")
-      .attr("offset", `${t * 100}%`)
+        .attr("offset", `${t * 100}%`)
       .attr("stop-color", color(temp));
-  });
+});
+
 
   legendSvg.append("rect")
     .attr("x", 22)
