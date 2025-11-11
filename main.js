@@ -30,9 +30,10 @@ Promise.all([
     d.scenario = d.scenario;
   });
 
-  const tempExtent = d3.extent(data, d => d.temp);
+  // Focus color on realistic surface temp range
+  const colorMin = -25, colorMax = 35;
   const color = d3.scaleSequential(d3.interpolateRdYlBu)
-    .domain([tempExtent[1], tempExtent[0]]);
+    .domain([colorMax, colorMin]); // Red = hot, blue = cold
 
   // Country borders
   const countries = topojson.feature(world, world.objects.countries);
@@ -79,20 +80,21 @@ Promise.all([
     draw(currentScenario, currentYear);
   });
 
-  // Legend in #legend-holder
+  // ---- Horizontal legend below map ----
   const legendWidth = 320, legendHeight = 16;
   const legendSvg = d3.select("#legend-holder")
     .append("svg")
     .attr("width", legendWidth + 44)
     .attr("height", legendHeight + 40);
 
+  // Gradient for legend
   const defs = legendSvg.append("defs");
   const gradient = defs.append("linearGradient")
     .attr("id", "legend-gradient")
     .attr("x1", "0%").attr("x2", "100%")
     .attr("y1", "0%").attr("y2", "0%");
   Array.from({ length: 12 }, (_, i) => i / 11).forEach(t => {
-    const temp = tempExtent[1] - t * (tempExtent[1] - tempExtent[0]);
+    const temp = colorMax - t * (colorMax - colorMin);
     gradient.append("stop")
       .attr("offset", `${t * 100}%`)
       .attr("stop-color", color(temp));
@@ -108,14 +110,14 @@ Promise.all([
     .attr("stroke-width", 0.7);
 
   const legendScale = d3.scaleLinear()
-    .domain([tempExtent[0], tempExtent[1]])
-    .range([22, legendWidth + 22]);
+    .domain([colorMin, colorMax])
+    .range([0, legendWidth]);
 
   const legendAxis = d3.axisBottom(legendScale)
     .ticks(6)
     .tickFormat(d => `${d.toFixed(1)}°C`);
   legendSvg.append("g")
-    .attr("transform", `translate(0, ${legendHeight + 10})`)
+    .attr("transform", `translate(22, ${legendHeight + 10})`)
     .call(legendAxis);
 
   legendSvg.append("text")
