@@ -1,4 +1,4 @@
-const width = 900, height = 450, rectsize = 4;
+const width = 900, height = 450, rectsize = 7;
 const mapDiv = d3.select("#map");
 
 const canvas = mapDiv.append("canvas")
@@ -15,7 +15,7 @@ const overlaySvg = mapDiv.append("svg")
   .style("left", 0)
   .style("top", 0);
 
-const projection = d3.geoEquirectangular().fitSize([width, height], {type: "Sphere"});
+const projection = d3.geoEquirectangular().fitSize([width, height], { type: "Sphere" });
 const geoPath = d3.geoPath().projection(projection);
 
 Promise.all([
@@ -27,56 +27,12 @@ Promise.all([
     d.lon = +d.lon;
     d.year = +d.year;
     d.temp = +d.temp;
+    d.scenario = d.scenario;
   });
 
   const tempExtent = d3.extent(data, d => d.temp);
   const color = d3.scaleSequential(d3.interpolateRdYlBu)
     .domain([tempExtent[1], tempExtent[0]]);
-
-  // Legend
-  const legendWidth = 300, legendHeight = 24;
-  const legendSvg = overlaySvg.append("g")
-    .attr("transform", `translate(${width / 2 - legendWidth / 2}, ${height + 40})`);
-
-  legendSvg.append("text")
-    .attr("x", legendWidth / 2)
-    .attr("y", -8)
-    .attr("text-anchor", "middle")
-    .attr("font-size", "13px")
-    .attr("fill", "#333")
-    .text("Mean Temperature (°C)");
-
-  const defs = overlaySvg.append("defs");
-  const gradient = defs.append("linearGradient")
-    .attr("id", "legend-gradient")
-    .attr("x1", "0%").attr("x2", "100%")
-    .attr("y1", "0%").attr("y2", "0%");
-
-  Array.from({length: 10}, (_, i) => i / 9).forEach(t => {
-    const temp = tempExtent[1] - t * (tempExtent[1] - tempExtent[0]);
-    gradient.append("stop")
-      .attr("offset", `${t * 100}%`)
-      .attr("stop-color", color(temp));
-  });
-
-  legendSvg.append("rect")
-    .attr("width", legendWidth)
-    .attr("height", legendHeight)
-    .style("fill", "url(#legend-gradient)")
-    .attr("stroke", "black")
-    .attr("stroke-width", 0.7);
-
-  const legendScale = d3.scaleLinear()
-    .domain([tempExtent[0], tempExtent[1]])
-    .range([0, legendWidth]);
-
-  const legendAxis = d3.axisBottom(legendScale)
-    .ticks(5)
-    .tickFormat(d => `${d.toFixed(1)}°C`);
-
-  legendSvg.append("g")
-    .attr("transform", `translate(0, ${legendHeight})`)
-    .call(legendAxis);
 
   // Country borders
   const countries = topojson.feature(world, world.objects.countries);
@@ -113,13 +69,60 @@ Promise.all([
   d3.select("#yearSelect").property("value", currentYear);
   draw(currentScenario, currentYear);
 
-  d3.select("#scenario").on("change", function() {
+  d3.select("#scenario").on("change", function () {
     currentScenario = this.value;
     draw(currentScenario, currentYear);
   });
 
-  d3.select("#yearSelect").on("change", function() {
+  d3.select("#yearSelect").on("change", function () {
     currentYear = +this.value;
     draw(currentScenario, currentYear);
   });
+
+  // Legend in #legend-holder
+  const legendWidth = 320, legendHeight = 16;
+  const legendSvg = d3.select("#legend-holder")
+    .append("svg")
+    .attr("width", legendWidth + 44)
+    .attr("height", legendHeight + 40);
+
+  const defs = legendSvg.append("defs");
+  const gradient = defs.append("linearGradient")
+    .attr("id", "legend-gradient")
+    .attr("x1", "0%").attr("x2", "100%")
+    .attr("y1", "0%").attr("y2", "0%");
+  Array.from({ length: 12 }, (_, i) => i / 11).forEach(t => {
+    const temp = tempExtent[1] - t * (tempExtent[1] - tempExtent[0]);
+    gradient.append("stop")
+      .attr("offset", `${t * 100}%`)
+      .attr("stop-color", color(temp));
+  });
+
+  legendSvg.append("rect")
+    .attr("x", 22)
+    .attr("y", 10)
+    .attr("width", legendWidth)
+    .attr("height", legendHeight)
+    .attr("fill", "url(#legend-gradient)")
+    .attr("stroke", "black")
+    .attr("stroke-width", 0.7);
+
+  const legendScale = d3.scaleLinear()
+    .domain([tempExtent[0], tempExtent[1]])
+    .range([22, legendWidth + 22]);
+
+  const legendAxis = d3.axisBottom(legendScale)
+    .ticks(6)
+    .tickFormat(d => `${d.toFixed(1)}°C`);
+  legendSvg.append("g")
+    .attr("transform", `translate(0, ${legendHeight + 10})`)
+    .call(legendAxis);
+
+  legendSvg.append("text")
+    .attr("x", legendWidth / 2 + 22)
+    .attr("y", 36)
+    .attr("text-anchor", "middle")
+    .attr("font-size", "14px")
+    .attr("fill", "#333")
+    .text("Mean Temperature (°C)");
 });
