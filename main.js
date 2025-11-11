@@ -15,8 +15,73 @@ const overlaySvg = mapDiv.append("svg")
   .style("left", 0)
   .style("top", 0);
 
+// Tooltip
+const tooltip = d3.select("body").append("div")
+  .attr("class", "tooltip")
+  .style("position", "absolute")
+  .style("background", "rgba(0, 0, 0, 0.8)")
+  .style("color", "white")
+  .style("padding", "8px 12px")
+  .style("border-radius", "4px")
+  .style("font-size", "12px")
+  .style("pointer-events", "none")
+  .style("opacity", 0)
+  .style("z-index", 1000);
+
+// Trend chart container
+const trendDiv = d3.select("#container").append("div")
+  .attr("id", "trend-chart")
+  .style("margin-top", "20px")
+  .style("display", "none");
+
 const projection = d3.geoEquirectangular().fitSize([width, height], { type: "Sphere" });
 const geoPath = d3.geoPath().projection(projection);
+
+// Helper function to normalize longitude from 0-360 to -180-180
+function normalizeLongitude(lon) {
+  if (lon > 180) return lon - 360;
+  return lon;
+}
+
+// Helper function to determine continent from coordinates
+function getContinentFromCoords(lon, lat) {
+  lon = normalizeLongitude(lon);
+  // Antarctica 
+  if (lat < -60) {
+    // Check: if it's in the New Zealand region, it's not Antarctica
+    if (lon >= 165 && lon <= 180 && lat >= -50 && lat <= -34) return "Australia/Oceania";
+    // South America's southern tip is around lat -55, so check that too
+    if (lon >= -70 && lon <= -55 && lat >= -60 && lat <= -50) return "South America";
+    return "Antarctica";
+  }
+  
+  // South America
+  if (lon >= -85 && lon <= -35 && lat >= -55 && lat <= 15) return "South America";
+  
+  // Australia/Oceania - includes New Zealand (lon 165-180, lat -47 to -34)
+  if (lon >= 110 && lon <= 180 && lat >= -50 && lat <= 0) return "Australia/Oceania";
+  
+  // Africa
+  if (lon >= -20 && lon <= 50 && lat >= -35 && lat <= 37) return "Africa";
+  
+  // North America
+  if (lon >= -180 && lon <= -10 && lat >= 10 && lat <= 90) return "North America";
+  
+  // Europe 
+  if (lon >= -10 && lon <= 40 && lat >= 35 && lat <= 75) {
+    // Exclude eastern Russia (if lon > 30 and lat > 60, it's likely Asian Russia)
+    if (lon > 30 && lat > 60) return "Asia";
+    return "Europe";
+  }
+  
+  // Asia 
+  if (lon >= 40 && lon <= 180 && lat >= 10 && lat <= 90) return "Asia";
+  
+  // Arctic 
+  if (lat > 75) return "Arctic";
+  
+  return "Other";
+}
 
 Promise.all([
   d3.csv("grid_temp_decades.csv"),
@@ -25,6 +90,7 @@ Promise.all([
   data.forEach(d => {
     d.lat = +d.lat;
     d.lon = +d.lon;
+    if (d.lon > 180) d.lon = d.lon - 360;
     d.year = +d.year;
     d.temp = +d.temp;
     d.scenario = d.scenario;
@@ -35,16 +101,19 @@ Promise.all([
   const color = d3.scaleSequential(d3.interpolateRdYlBu)
     .domain([colorMax, colorMin]); // Red = hot, blue = cold
 
-  // Country borders
+  // Country borders - make clickable
   const countries = topojson.feature(world, world.objects.countries);
-  overlaySvg.append("g")
+  const countryPaths = overlaySvg.append("g")
+    .attr("class", "countries")
+    .style("pointer-events", "auto")
     .selectAll("path").data(countries.features)
     .join("path")
     .attr("d", geoPath)
-    .attr("fill", "none")
+    .attr("fill", "rgba(255,255,255,0.01)") // Nearly transparent but clickable
     .attr("stroke", "black")
     .attr("stroke-width", 1.2)
-    .attr("opacity", 0.98);
+    .attr("opacity", 0.98)
+    .style("cursor", "pointer");
 
   // Year dropdown
   const yearSet = Array.from(new Set(data.map(d => d.year))).sort((a, b) => a - b);
@@ -55,13 +124,202 @@ Promise.all([
       .text(y);
   });
 
+  let currentFilteredData = [];
+
   function draw(scenario, year) {
     ctx.clearRect(0, 0, width, height);
-    const filtered = data.filter(d => d.scenario === scenario && d.year === +year);
-    filtered.forEach(d => {
+    currentFilteredData = data.filter(d => d.scenario === scenario && d.year === +year);
+    currentFilteredData.forEach(d => {
       const [x, y] = projection([d.lon, d.lat]);
       ctx.fillStyle = color(d.temp);
       ctx.fillRect(x, y, rectsize, rectsize);
+    });
+  }
+
+  // Tooltip on mouse move over canvas
+  d3.select(canvas).on("mousemove", function(event) {
+    const rect = canvas.getBoundingClientRect();
+    const mx = event.clientX - rect.left;
+    const my = event.clientY - rect.top;
+    
+    // Find nearest data point
+    let nearest = null;
+    let minDist = Infinity;
+    
+    currentFilteredData.forEach(d => {
+      const [px, py] = projection([d.lon, d.lat]);
+      const dist = Math.sqrt(Math.pow(mx - px, 2) + Math.pow(my - py, 2));
+      if (dist < minDist && dist < rectsize * 3) {
+        minDist = dist;
+        nearest = d;
+      }
+    });
+    
+    if (nearest) {
+      tooltip
+        .style("opacity", 1)
+        .html(`Temperature: ${nearest.temp.toFixed(2)}°C<br>Lat: ${nearest.lat.toFixed(2)}°, Lon: ${nearest.lon.toFixed(2)}°`)
+        .style("left", (event.pageX + 10) + "px")
+        .style("top", (event.pageY - 10) + "px");
+    } else {
+      tooltip.style("opacity", 0);
+    }
+  });
+
+  d3.select(canvas).on("mouseleave", function() {
+    tooltip.style("opacity", 0);
+  });
+
+  // Click handler for continents (on country paths)
+  countryPaths.on("click", function(event, d) {
+    event.stopPropagation();
+    // Get the centroid of the clicked country
+    const centroid = d3.geoPath().projection(projection).centroid(d);
+    const [lon, lat] = projection.invert(centroid);
+    const continent = getContinentFromCoords(lon, lat);
+    
+    showTrendChart(continent, data);
+  });
+
+  // Fallback: click on canvas to determine continent
+  d3.select(canvas).on("click", function(event) {
+    const rect = canvas.getBoundingClientRect();
+    const mx = event.clientX - rect.left;
+    const my = event.clientY - rect.top;
+    const [lon, lat] = projection.invert([mx, my]);
+    const continent = getContinentFromCoords(lon, lat);
+    
+    showTrendChart(continent, data);
+  });
+
+  // Function to show temperature trend for a continent
+  function showTrendChart(continent, allData) {
+    // Filter data by continent based on coordinates
+    const continentData = allData.filter(d => {
+      const cont = getContinentFromCoords(d.lon, d.lat);
+      return cont === continent;
+    });
+
+    // Group by year and scenario, calculate mean temperature
+    const trendData = {};
+    continentData.forEach(d => {
+      const key = `${d.year}-${d.scenario}`;
+      if (!trendData[key]) {
+        trendData[key] = { year: d.year, scenario: d.scenario, temps: [] };
+      }
+      trendData[key].temps.push(d.temp);
+    });
+
+    const trends = Object.values(trendData).map(d => ({
+      year: d.year,
+      scenario: d.scenario,
+      meanTemp: d3.mean(d.temps)
+    }));
+
+    // Clear previous chart
+    trendDiv.selectAll("*").remove();
+    trendDiv.style("display", "block");
+
+    // Title
+    trendDiv.append("h3")
+      .style("text-align", "center")
+      .style("margin-bottom", "10px")
+      .text(`Temperature Trend: ${continent}`);
+
+    const margin = { top: 20, right: 80, bottom: 40, left: 60 };
+    const chartWidth = 800 - margin.left - margin.right;
+    const chartHeight = 300 - margin.top - margin.bottom;
+
+    const svg = trendDiv.append("svg")
+      .attr("width", chartWidth + margin.left + margin.right)
+      .attr("height", chartHeight + margin.top + margin.bottom);
+
+    const g = svg.append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    // Scales
+    const xScale = d3.scaleLinear()
+      .domain(d3.extent(trends, d => d.year))
+      .range([0, chartWidth]);
+
+    const yScale = d3.scaleLinear()
+      .domain(d3.extent(trends, d => d.meanTemp)).nice()
+      .range([chartHeight, 0]);
+
+    // Color scale for scenarios
+    const scenarioColor = d3.scaleOrdinal()
+      .domain(["Low Emissions", "Medium Emissions", "High Emissions"])
+      .range(["#2ecc71", "#f39c12", "#e74c3c"]);
+
+    // Line generator
+    const line = d3.line()
+      .x(d => xScale(d.year))
+      .y(d => yScale(d.meanTemp))
+      .curve(d3.curveMonotoneX);
+
+    // Group by scenario
+    const scenarios = ["Low Emissions", "Medium Emissions", "High Emissions"];
+    scenarios.forEach(scenario => {
+      const scenarioTrends = trends.filter(d => d.scenario === scenario)
+        .sort((a, b) => a.year - b.year);
+
+      g.append("path")
+        .datum(scenarioTrends)
+        .attr("fill", "none")
+        .attr("stroke", scenarioColor(scenario))
+        .attr("stroke-width", 2)
+        .attr("d", line);
+
+      g.selectAll(`.dot-${scenario.replace(/\s+/g, "-")}`)
+        .data(scenarioTrends)
+        .enter().append("circle")
+        .attr("class", `dot-${scenario.replace(/\s+/g, "-")}`)
+        .attr("cx", d => xScale(d.year))
+        .attr("cy", d => yScale(d.meanTemp))
+        .attr("r", 4)
+        .attr("fill", scenarioColor(scenario));
+    });
+
+    // Axes
+    g.append("g")
+      .attr("transform", `translate(0,${chartHeight})`)
+      .call(d3.axisBottom(xScale).tickFormat(d3.format("d")))
+      .append("text")
+      .attr("x", chartWidth / 2)
+      .attr("y", 35)
+      .attr("fill", "#333")
+      .style("text-anchor", "middle")
+      .text("Year");
+
+    g.append("g")
+      .call(d3.axisLeft(yScale).tickFormat(d => `${d.toFixed(1)}°C`))
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", -45)
+      .attr("x", -chartHeight / 2)
+      .attr("fill", "#333")
+      .style("text-anchor", "middle")
+      .text("Mean Temperature (°C)");
+
+    // Legend - positioned in upper left
+    const legend = g.append("g")
+      .attr("transform", "translate(10, 10)");
+
+    scenarios.forEach((scenario, i) => {
+      const legendRow = legend.append("g")
+        .attr("transform", `translate(0, ${i * 20})`);
+
+      legendRow.append("line")
+        .attr("x1", 0)
+        .attr("x2", 20)
+        .attr("stroke", scenarioColor(scenario))
+        .attr("stroke-width", 2);
+
+      legendRow.append("text")
+        .attr("x", 25)
+        .attr("y", 4)
+        .style("font-size", "12px")
+        .text(scenario);
     });
   }
 
