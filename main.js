@@ -117,12 +117,6 @@ Promise.all([
 
   // Year dropdown
   const yearSet = Array.from(new Set(data.map(d => d.year))).sort((a, b) => a - b);
-  const yearSelect = d3.select("#yearSelect");
-  yearSet.forEach(y => {
-    yearSelect.append("option")
-      .attr("value", y)
-      .text(y);
-  });
 
   let currentFilteredData = [];
 
@@ -324,7 +318,7 @@ Promise.all([
   }
 
   let currentScenario = d3.select("#scenario").property("value");
-  let currentYear = +d3.select("#yearSelect").property("value") || yearSet[0];
+  let currentYear = yearSet[0];
   d3.select("#yearSelect").property("value", currentYear);
   draw(currentScenario, currentYear);
 
@@ -345,19 +339,11 @@ Promise.all([
   yearSlider.on("input", function () {
     currentYear = +this.value;
     yearValue.text(currentYear);
-    d3.select("#yearSelect").property("value", currentYear);
     draw(currentScenario, currentYear);
   });
 
   d3.select("#scenario").on("change", function () {
     currentScenario = this.value;
-    draw(currentScenario, currentYear);
-  });
-
-  d3.select("#yearSelect").on("change", function () {
-    currentYear = +this.value;
-    yearSlider.property("value", currentYear);
-    yearValue.text(currentYear);
     draw(currentScenario, currentYear);
   });
 
