@@ -328,6 +328,27 @@ Promise.all([
   d3.select("#yearSelect").property("value", currentYear);
   draw(currentScenario, currentYear);
 
+  //Year slider setup
+  const yearSlider = d3.select("#yearSlider");
+  const yearValue = d3.select("#yearValue");
+
+  //Initialize slider min/max value based on available years
+  yearSlider
+    .attr("min", d3.min(yearSet))
+    .attr("max", d3.max(yearSet))
+    .attr("step", 10)
+    .property("value", currentYear);
+
+  yearValue.text(currentYear);
+
+  //When the user drags the slider
+  yearSlider.on("input", function () {
+    currentYear = +this.value;
+    yearValue.text(currentYear);
+    d3.select("#yearSelect").property("value", currentYear);
+    draw(currentScenario, currentYear);
+  });
+
   d3.select("#scenario").on("change", function () {
     currentScenario = this.value;
     draw(currentScenario, currentYear);
@@ -335,6 +356,8 @@ Promise.all([
 
   d3.select("#yearSelect").on("change", function () {
     currentYear = +this.value;
+    yearSlider.property("value", currentYear);
+    yearValue.text(currentYear);
     draw(currentScenario, currentYear);
   });
 
