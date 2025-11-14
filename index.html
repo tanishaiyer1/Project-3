@@ -31,5 +31,18 @@
     <div id="legend-holder"></div>
     <script src="main.js"></script>
   </div>
+  <div id="writeup">
+    <h2>Rationale for Design Decisions</h2>
+    <p>
+      In our final interactive visualization, we wanted to display the predicted mean temperatures around the world from 2020 to 2100. Our first design decision was to display these temperatures under different emissions scenarios. This would allow the user to visually see how each country/continent’s average temperature would change in the future if emission rates were high or low. We then decided to color code cooler temperatures to be blue, medium temperatures to be yellow/orange, and hotter temperatures to be red. This decision is intuitive, as these colors are already associated with hot and cold temperatures. We used a gradient legend for the mean temperatures because it helps viewers quickly compare regions on the map, making it easier to identify warmer and cooler areas at a glance. Since the color changes aren’t always easy to distinguish from afar, we added a tooltip to display the longitude, latitude, and temperature whenever you hover over a location on the map. 
+      A slider was implemented to display the projected temperatures every ten years, allowing the viewer to quickly see how the visualization changes over time. To get a better understanding of how a specific continent’s temperature would change over time, we added a linked line chart feature where clicking on any part of a continent on the map would generate that continent’s mean temperature trend under low, medium, and high emission scenarios over time. We did consider a map that could switch between average temperature and average precipitation under different emission scenarios, but decided to only focus on temperature so that we could work on a more functional tooltip feature. Overall these visual encodings and interactive features make it easier to understand how global temperatures are projected to change if high emissions continue. By implementing the low and medium emission scenarios, viewers can clearly see how reduced emissions lead to smaller temperature increases over time.
+    </p>
+  </div>
+  <div id="writeup">
+    <h2>Overview of Development Process</h2>
+    <p>
+      We started our project by looking at our graphs from the project checkpoint to come up with an interactive visualization. One of our visualizations compared two color coded world maps that showed projected temperatures under low vs high emissions, and this inspired us to explore projected mean temperatures around the world from 2020 to 2100 under different emission scenarios. We then narrowed down which interactive features to include in our graphic, as well as what data pieces were most informative. While filtering our data, we decided to only include emission scenarios every ten years instead of every year from 2020 to 2100 because the full dataset was too large to process and visualize effectively. After outlining all the data processing tasks and interactive features that needed to be done, we assigned the work evenly. Altogether, we spent around 8-10 hours per person on the project. The most time-consuming parts were understanding the data we needed to use, loading the data itself, and getting the tooltip on the webpage to work. Once everyone finished their individual pieces, we honed in on finalizing the design and making sure the visualizations felt coherent as one final interactive graphic.
+    </p>
+  </div>
 </body>
 </html>

@@ -38,3 +38,23 @@ label, select {
   font-size: 1em;
   margin-right: 10px;
 }
+
+#writeup {
+  max-width: 900px;
+  margin: 50px auto;
+  padding: 20px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+#writeup h2 {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+#writeup p {
+  line-height: 1.6;
+  font-size: 16px;
+  color: #333;
+}
