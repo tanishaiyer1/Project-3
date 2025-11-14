@@ -15,7 +15,8 @@ const overlaySvg = mapDiv.append("svg")
   .style("left", 0)
   .style("top", 0)
   .style("top", 0)
-  .style("pointer-events", "none");
+  // .style("pointer-events", "none");
+  .style("pointer-events", "auto");
 
 // Tooltip
 const tooltip = d3.select("body").append("div")
@@ -105,19 +106,38 @@ Promise.all([
 
   // Country borders - make clickable
   const countries = topojson.feature(world, world.objects.countries);
+  // const countryPaths = overlaySvg.append("g")
+  //   .attr("class", "countries")
+  //   .style("pointer-events", "auto")
+  //   .selectAll("path")
+  //   .data(countries.features)
+  //   .join("path")
+  //   .attr("d", geoPath)
+  //   .attr("fill", "rgba(255,255,255,0.01)")
+  //   .attr("stroke", "black")
+  //   .attr("stroke-width", 1.2)
+  //   .attr("opacity", 0.98)
+  //   .style("cursor", "pointer")
+  //   .style("pointer-events", "visibleStroke");
   const countryPaths = overlaySvg.append("g")
     .attr("class", "countries")
-    .style("pointer-events", "none")
     .selectAll("path")
     .data(countries.features)
     .join("path")
     .attr("d", geoPath)
-    .attr("fill", "rgba(255,255,255,0.01)")
+    .attr("fill", "rgba(255,255,255,0.01)") // nearly transparent
     .attr("stroke", "black")
     .attr("stroke-width", 1.2)
-    .attr("opacity", 0.98)
     .style("cursor", "pointer")
-    .style("pointer-events", "visibleStroke");
+    .style("pointer-events", "all") // enable clicks and hover on shape
+    .on("click", function(event, d) {
+      event.stopPropagation();
+      const centroid = geoPath.centroid(d);
+      const [lon, lat] = projection.invert(centroid);
+      const continent = getContinentFromCoords(lon, lat);
+      showTrendChart(continent, data);
+  });
+
 
 
   // Year dropdown
@@ -136,16 +156,41 @@ Promise.all([
   }
 
   // Tooltip on mouse move over canvas
-  d3.select(canvas).on("mousemove", function(event) {
-    console.log("mousemove firing");
-    const rect = canvas.getBoundingClientRect();
-    const mx = event.clientX - rect.left;
-    const my = event.clientY - rect.top;
+  // d3.select(canvas).on("mousemove", function(event) {
+  //   console.log("mousemove firing");
+  //   const rect = canvas.getBoundingClientRect();
+  //   const mx = event.clientX - rect.left;
+  //   const my = event.clientY - rect.top;
     
-    // Find nearest data point
+  //   // Find nearest data point
+  //   let nearest = null;
+  //   let minDist = Infinity;
+    
+  //   currentFilteredData.forEach(d => {
+  //     const [px, py] = projection([d.lon, d.lat]);
+  //     const dist = Math.sqrt(Math.pow(mx - px, 2) + Math.pow(my - py, 2));
+  //     if (dist < minDist && dist < rectsize * 3) {
+  //       minDist = dist;
+  //       nearest = d;
+  //     }
+  //   });
+    
+  //   if (nearest) {
+  //     tooltip
+  //       .style("opacity", 1)
+  //       .html(`Temperature: ${nearest.temp.toFixed(2)}°C<br>Lat: ${nearest.lat.toFixed(2)}°, Lon: ${nearest.lon.toFixed(2)}°`)
+  //       .style("left", (event.pageX + 10) + "px")
+  //       .style("top", (event.pageY - 10) + "px");
+  //   } else {
+  //     tooltip.style("opacity", 0);
+  //   }
+  // });
+  overlaySvg.on("mousemove", function(event) {
+    const [mx, my] = d3.pointer(event); // relative to SVG
+
     let nearest = null;
     let minDist = Infinity;
-    
+
     currentFilteredData.forEach(d => {
       const [px, py] = projection([d.lon, d.lat]);
       const dist = Math.sqrt(Math.pow(mx - px, 2) + Math.pow(my - py, 2));
@@ -154,7 +199,7 @@ Promise.all([
         nearest = d;
       }
     });
-    
+
     if (nearest) {
       tooltip
         .style("opacity", 1)
