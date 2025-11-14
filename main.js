@@ -211,9 +211,7 @@ Promise.all([
     }
   });
 
-  d3.select(canvas).on("mouseleave", function() {
-    tooltip.style("opacity", 0);
-  });
+  overlaySvg.on("mouseleave", () => tooltip.style("opacity", 0));
 
   // Click handler for continents (on country paths)
   countryPaths.on("click", function(event, d) {
@@ -441,7 +439,7 @@ Promise.all([
 
   legendSvg.append("text")
     .attr("x", legendWidth / 2 + 22)
-    .attr("y", 36)
+    .attr("y", 22)
     .attr("text-anchor", "middle")
     .attr("font-size", "14px")
     .attr("fill", "#333")
