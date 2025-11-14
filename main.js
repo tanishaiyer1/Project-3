@@ -13,7 +13,9 @@ const overlaySvg = mapDiv.append("svg")
   .attr("height", height)
   .style("position", "absolute")
   .style("left", 0)
-  .style("top", 0);
+  .style("top", 0)
+  .style("top", 0)
+  .style("pointer-events", "none");
 
 // Tooltip
 const tooltip = d3.select("body").append("div")
@@ -105,15 +107,18 @@ Promise.all([
   const countries = topojson.feature(world, world.objects.countries);
   const countryPaths = overlaySvg.append("g")
     .attr("class", "countries")
-    .style("pointer-events", "auto")
-    .selectAll("path").data(countries.features)
+    .style("pointer-events", "none")
+    .selectAll("path")
+    .data(countries.features)
     .join("path")
     .attr("d", geoPath)
-    .attr("fill", "rgba(255,255,255,0.01)") // Nearly transparent but clickable
+    .attr("fill", "rgba(255,255,255,0.01)")
     .attr("stroke", "black")
     .attr("stroke-width", 1.2)
     .attr("opacity", 0.98)
-    .style("cursor", "pointer");
+    .style("cursor", "pointer")
+    .style("pointer-events", "visibleStroke");
+
 
   // Year dropdown
   const yearSet = Array.from(new Set(data.map(d => d.year))).sort((a, b) => a - b);
@@ -132,6 +137,7 @@ Promise.all([
 
   // Tooltip on mouse move over canvas
   d3.select(canvas).on("mousemove", function(event) {
+    console.log("mousemove firing");
     const rect = canvas.getBoundingClientRect();
     const mx = event.clientX - rect.left;
     const my = event.clientY - rect.top;
